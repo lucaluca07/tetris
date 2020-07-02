@@ -7,7 +7,7 @@ const isDev = process.env.NODE_ENV === "development";
 module.exports = {
   entry: "./src/index.ts",
   mode: isDev ? "development" : "production",
-  devtool: "inline-source-map",
+  devtool: "cheap-module-source-map",
   output: {
     filename: "[name].[contenthash].js",
     path: path.resolve(__dirname, "dist"),
@@ -19,9 +19,6 @@ module.exports = {
   },
   resolve: {
     extensions: [".ts", ".js"],
-  },
-  alias: {
-    '@': path.resolve(__dirname, 'src'),
   },
   module: {
     rules: [

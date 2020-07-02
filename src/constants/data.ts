@@ -1,6 +1,6 @@
 export const map = Array(20).fill(Array(20).fill(0));
 
-const I = [1, 1, 1, 1];
+const I = [[1, 1, 1, 1]];
 const J = [
   [1, 1, 1],
   [0, 0, 1],

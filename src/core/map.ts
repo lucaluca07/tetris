@@ -4,27 +4,39 @@ interface IProps {
 }
 
 export default class TetrisMap {
+  map: number[][];
+  ctx: CanvasRenderingContext2D;
+
   constructor(props: IProps) {
     const { map, ctx } = props;
-    this.render(map, ctx)
+    this.map = map;
+    this.ctx = ctx;
+    this.render();
   }
-  render = (map: number[][], ctx: CanvasRenderingContext2D) => {
+
+  updateMap = (map: number[][]) => {
+    this.map = map;
+    this.render();
+  };
+  render = () => {
+    const map = this.map;
+    const ctx = this.ctx;
     const h = map.length;
     const rowHeight = 500 / h;
+    ctx.clearRect(0, 0, 500, 500);
     ctx.strokeStyle = "#eee";
+    ctx.fillStyle = "green"
     ctx.lineWidth = 1;
-    const w = Math.max(...map.map((item) => item.length));
-    for (let i = 0; i <= h; i++) {
-      ctx.beginPath();
-      ctx.moveTo(0, rowHeight * i);
-      ctx.lineTo(500, rowHeight * i);
-      ctx.stroke();
-    }
-    for (let i = 0; i <= w; i++) {
-      ctx.beginPath();
-      ctx.moveTo(rowHeight * i, 0);
-      ctx.lineTo(rowHeight * i, 500);
-      ctx.stroke();
-    }
-  }
+    map.forEach((row, rowIndex) => {
+      row.forEach((cell, cellIndex) => {
+        const x = rowHeight * cellIndex;
+        const y = rowHeight * rowIndex;
+        if(cell) {
+          ctx.fillRect(x, y, rowHeight, rowHeight);
+        } else {
+          ctx.strokeRect(x, y, rowHeight, rowHeight);
+        }
+      });
+    });
+  };
 }

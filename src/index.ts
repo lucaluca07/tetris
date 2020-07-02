@@ -1,10 +1,23 @@
 import Game from "./core/game";
 
-const game = new Game({
-  width: 500,
-  height: 800,
-});
+function init() {
+  const game = new Game({
+    width: 500,
+    height: 500,
+  });
+  
+  const root = document.querySelector("#root") || document.body;
+  
+  const startButton = document.createElement("button");
+  startButton.innerHTML = 'start'
 
-const root = document.querySelector("#root") || document.body;
+  startButton.addEventListener('click', () => {
+    game.start();
+  })
+  root.appendChild(startButton)
+  game.init(root);
+}
 
-game.init(root);
+
+init();
+
