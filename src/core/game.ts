@@ -1,15 +1,16 @@
 import { map } from "../constants/data";
 import TetrisMap from "./map";
-import { deepClone } from "../utils/utils";
-import { tetriminos } from '../constants/data'
-import { randomNum } from '../utils/math'
-const tetrominoKeys = Object.keys(tetriminos) as Array<keyof typeof tetriminos>
-
+import { deepClone, rotateArray } from "../utils/utils";
+import { tetriminos } from "../constants/data";
+import { randomNum } from "../utils/math";
+const tetrominoKeys = Object.keys(tetriminos) as Array<keyof typeof tetriminos>;
 
 interface Config {
   width: number;
   height: number;
 }
+
+type CommandType = "left" | "right" | "down" | "rotate";
 
 export default class Game {
   width: number;
@@ -52,16 +53,36 @@ export default class Game {
 
   reset = () => {};
 
-  command = (command: "left" | "right" | "down" | "rotate") => {};
+  command = (command: CommandType) => {
+    switch (command) {
+      case "left":
+      case "right":
+        this.move(command);
+        return;
+      case "rotate":
+        this.rotateTetromino();
+        return;
+      default:
+        throw new Error("Error: unknown command");
+    }
+  };
 
   run = () => {
-    if(this.isOver()) return;
+    if (this.isOver()) return;
     window.setTimeout(() => {
       const newMap = this.move("down");
-      console.log(newMap)
+      console.log(newMap);
       this.tetrisMap?.updateMap(newMap);
       this.run();
     }, 300);
+  };
+
+  rotateTetromino = () => {
+    const tetromino = this.tetromino;
+    if (!tetromino) return;
+    const newTetromino = rotateArray(tetromino);
+    if(!this.canRotate(newTetromino)) return;
+    this.tetromino = newTetromino;
   };
 
   getCurrentMap = () => {
@@ -79,79 +100,95 @@ export default class Game {
     tetromino.forEach((item, i) => {
       const mapCell = [...newMap[cell + i]];
       item.forEach((item, ii) => {
-        if(item) {
-          mapCell[start + ii] = item
+        if (item) {
+          mapCell[start + ii] = item;
         }
-      })
+      });
       newMap[cell + i] = mapCell;
     });
     return newMap;
   };
 
+  /**
+   * 碰撞检测
+   */
   isBottom = () => {
     if (!this.tetromino) return;
     const len = this.tetromino.length;
     const [x, y] = this.position;
-    const nextCell = this.map[y + len];
-    if(!nextCell) return true;
-    return this.tetromino[len - 1]?.some(
-      (el, i) => el && nextCell[x + i]
-    );
+    const isLastCell = y + len >= this.map.length;
+    if (isLastCell) return true;
+    return this.tetromino.some((item, i) => {
+      const nextCell = this.map[y + i + 1];
+      return item.some((el, ii) => el && nextCell[x + ii])
+    });
   };
 
   isRightmost = () => {
     if (!this.tetromino) return;
     const [x, y] = this.position;
-    if(x + this.tetromino[0].length >= this.map[0].length - 1) {
+    // 最右边
+    if (x + this.tetromino[0].length >= this.map[0].length) {
       return true;
     }
-
-    const cell = this.map[y]
-    return !!cell[x + this.tetromino[0].length + 1]
+    return this.tetromino.some((item, i) => {
+      const lastIndex = item.lastIndexOf(1);
+      const cell = this.map[y + i];
+      return !!cell[x + lastIndex + 1]
+    });
   };
 
   isLeftmost = () => {
     if (!this.tetromino) return;
     const [x, y] = this.position;
-    if(x <= 0) {
+    if (x <= 0) {
       return true;
     }
-    const cell = this.map[y]
-    return !!cell[x - 1]
+    return this.tetromino.some((item, i) => {
+      const index = item.indexOf(1);
+      const cell = this.map[y + i];
+      return !!cell[x - index - 1]
+    });
   };
 
-  canRotate = () => {
-
-  }
+  canRotate = (newTetromino: number[][]) => {
+    const [x, y] = this.position;
+    return !newTetromino.some((item, i) => {
+      const cell = this.map[y + i]
+      item.some((el, ii) => el && cell[x + ii])
+    })
+  };
 
   isOver = () => {
     const [x] = this.position;
-    if(!this.tetromino) return;
-    const len = this.tetromino[0].length
+    if (!this.tetromino) return;
+    const len = this.tetromino[0].length;
     const firstCell = this.map[0];
-    for(let i = 0; i < len; i++) {
-      if(firstCell[x + i]) {
-        return true
+    for (let i = 0; i < len; i++) {
+      if (firstCell[x + i]) {
+        return true;
       }
     }
     return false;
-  }
+  };
 
   move = (type: "left" | "right" | "down") => {
     const [x, y] = this.position;
     if (!this.tetromino) return;
     switch (type) {
       case "left":
+        if (this.isLeftmost()) return;
         this.position = [x - 1, y];
         return this.getCurrentMap();
       case "right":
+        if (this.isRightmost()) return;
         this.position = [x + 1, y];
         return this.getCurrentMap();
       case "down":
-        if(this.isBottom()) {
+        if (this.isBottom()) {
           this.map = this.getCurrentMap();
           this.tetromino = this.getTetromino();
-          this.position = [x, 0]
+          this.position = [x, 0];
         } else {
           this.position = [x, y + 1];
         }
@@ -160,7 +197,7 @@ export default class Game {
   };
 
   getTetromino = () => {
-    const key = tetrominoKeys[randomNum(tetrominoKeys.length - 1)]
+    const key = tetrominoKeys[randomNum(tetrominoKeys.length - 1)];
     return tetriminos[key];
-  }
+  };
 }
