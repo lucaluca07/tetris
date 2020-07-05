@@ -22,5 +22,6 @@
   "scripts": {
     "build": "webpack",
     "start": "webpack-dev-server --open"
-  }
+  },
+  "license": "MIT"
 }

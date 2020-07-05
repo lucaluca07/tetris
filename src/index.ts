@@ -1,22 +1,22 @@
-import Game from "./core/game";
+import Game from './core/game';
 
 function init() {
+  const root = document.querySelector('#root') || document.body;
+  const startButton = document.createElement('button');
+  startButton.innerHTML = 'start';
+  root.appendChild(startButton);
+
   const game = new Game({
     width: 500,
     height: 500,
+    container: root
   });
 
-  const root = document.querySelector("#root") || document.body;
-
-  const startButton = document.createElement("button");
-  startButton.innerHTML = "start";
-
-  startButton.addEventListener("click", () => {
-    game.start();
+  startButton.addEventListener('click', () => {
+    game.command('start');
   });
-  root.appendChild(startButton);
-  game.init(root);
-  window.addEventListener("keydown", (event) => {
+
+  window.addEventListener('keydown', event => {
     console.log(event.keyCode);
     /**
      * W: 87
@@ -27,18 +27,24 @@ function init() {
      * down: 40
      * left: 37
      * right: 39
+     * space: 32
      */
     switch (event.keyCode) {
       case 65:
       case 37:
-        game.command("left");
-        return;
+        game.command('left');
+        break;
       case 68:
       case 38:
-        game.command("right");
-        return;
+        game.command('right');
+        break;
       case 87:
-        game.command("rotate");
+        game.command('rotate');
+        break;
+      case 32:
+        event.preventDefault();
+        game.command('pause');
+        break;
     }
   });
 }
