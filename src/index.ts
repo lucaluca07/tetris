@@ -1,22 +1,31 @@
-import Game from './core/game';
+import Game from "./core/game";
 
+let status = "init";
 function init() {
-  const root = document.querySelector('#root') || document.body;
-  const startButton = document.createElement('button');
-  startButton.innerHTML = 'start';
+  const root = document.querySelector("#root") || document.body;
+  const startButton = document.createElement("button");
+  startButton.innerHTML = "start";
   root.appendChild(startButton);
 
   const game = new Game({
-    width: 500,
-    height: 500,
-    container: root
+    rowLen: 30,
+    colLen: 20,
+    container: root,
   });
 
-  startButton.addEventListener('click', () => {
-    game.command('start');
+  startButton.addEventListener("click", () => {
+    let command: "start" | "pause" = "start";
+    if (status === "running") {
+      command = "pause";
+      status = "pause";
+    } else {
+      status = "running";
+    }
+    startButton.innerHTML = status === "pause" ? "start" : "pause";
+    game.command(command);
   });
 
-  window.addEventListener('keydown', event => {
+  window.addEventListener("keydown", (event) => {
     console.log(event.keyCode);
     /**
      * W: 87
@@ -32,18 +41,17 @@ function init() {
     switch (event.keyCode) {
       case 65:
       case 37:
-        game.command('left');
+        game.command("left");
         break;
       case 68:
       case 38:
-        game.command('right');
+        game.command("right");
         break;
       case 87:
-        game.command('rotate');
+        game.command("rotate");
         break;
-      case 32:
-        event.preventDefault();
-        game.command('pause');
+      case 83:
+        game.command("down");
         break;
     }
   });

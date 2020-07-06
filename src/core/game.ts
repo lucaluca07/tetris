@@ -1,83 +1,108 @@
 import { map } from "../constants/data";
 import TetrisMap from "./map";
-import { deepClone, rotateArray } from "../utils/utils";
+import { deepClone, rotateArray, getMap } from "../utils/utils";
 import { tetriminos } from "../constants/data";
 import { randomNum } from "../utils/math";
 const tetrominoKeys = Object.keys(tetriminos) as Array<keyof typeof tetriminos>;
 
 interface Config {
-  width: number;
-  height: number;
+  rowLen: number;
+  colLen: number;
   container: Element;
 }
 
-type CommandType = "start" | "pause"| "reset" | "left" | "right" | "down" | "rotate";
+type CommandType =
+  | "start"
+  | "pause"
+  | "reset"
+  | "left"
+  | "right"
+  | "down"
+  | "rotate";
+
+const BLOCK_SIZE = 20;
 
 export default class Game {
-  width: number;
-  height: number;
+  rowLen: number;
+  colLen: number;
   ctx?: CanvasRenderingContext2D;
   tetromino?: number[][];
   position: [number, number];
   map: number[][];
   tetrisMap?: TetrisMap;
-  status: 'init' | 'running' | 'pause'
+  status: "init" | "running" | "pause";
   timer?: number;
+  afterEliminationFns: ((count: number) => void)[];
+  afterStartFns: (() => void)[];
+  afterPauseFns: (() => void)[];
 
   constructor(config: Config) {
-    const { width = 500, height = 500, container } = config;
-    this.width = width;
-    this.height = height;
+    const { rowLen = 20, colLen = 20, container } = config;
+    this.rowLen = rowLen;
+    this.colLen = colLen;
     let start = Math.floor(map[0].length / 2);
     this.position = [start, 0];
-    this.map = deepClone(map);
-    this.init(container)
-    this.status = 'init'
+    this.map = getMap(rowLen, colLen);
+    this.init(container);
+    this.status = "init";
+    this.afterEliminationFns = [];
+    this.afterStartFns = [];
+    this.afterPauseFns = [];
   }
 
   init = (dom: Element) => {
     const canvas = document.createElement("canvas");
-    canvas.width = this.width;
-    canvas.height = this.height;
+    canvas.width = BLOCK_SIZE * this.colLen;
+    canvas.height = BLOCK_SIZE * this.rowLen;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     this.ctx = ctx;
-    this.tetrisMap = new TetrisMap({ map, ctx });
+    this.tetrisMap = new TetrisMap({ map: this.map, ctx, size: BLOCK_SIZE });
     dom.appendChild(canvas);
   };
 
   start = () => {
-    if(this.status === 'init') {
+    if (this.status === "running") return;
+    if (this.status === "init") {
       this.tetromino = this.getTetromino();
       const map = this.getCurrentMap();
       this.tetrisMap?.updateMap(map);
     }
-    this.status = 'running';
+    this.afterStartFns.forEach((fn) => fn?.());
+    this.status = "running";
     this.run();
   };
 
   pause = () => {
+    if (this.status === "pause") return;
     window.clearTimeout(this!.timer);
-    this.status = 'pause';
+    this.afterPauseFns.forEach((fn) => fn?.());
+    this.status = "pause";
   };
 
   reset = () => {
-    this.status = 'init';
+    if (this.status === "init") return;
+    this.status = "init";
+    this.map = getMap(this.rowLen, this.colLen);
+    this.tetromino = undefined;
+    this.tetrisMap?.updateMap(this.map);
   };
 
   command = (command: CommandType) => {
-    console.log('command:::', command)
+    console.log("command:::", command);
     switch (command) {
-      case 'start':
+      case "start":
         this.start();
-        return
-      case 'pause':
+        return;
+      case "pause":
         this.pause();
-        return
-      case 'reset':
+        return;
+      case "reset":
         this.reset();
-        return
+        return;
+      case "down":
+        this.move("bottom");
       case "left":
       case "right":
         this.move(command);
@@ -91,26 +116,57 @@ export default class Game {
   };
 
   // 事件监听
-  on = (type: 'afterPause' | 'afterStart' | 'afterElimination', method: Function) => {
+  on = (
+    type: "afterPause" | "afterStart" | "afterElimination",
+    method: Function
+  ) => {
     switch (type) {
-      case 'afterStart':
-
+      case "afterStart":
+        this.afterPause(method as () => void);
         break;
-      case 'afterPause':
-
+      case "afterPause":
+        this.afterStart(method as () => void);
         break;
-      case 'afterElimination':
-
+      case "afterElimination":
+        this.afterElimination(method as (count: number) => void);
         break;
-
       default:
         break;
     }
-  }
+  };
 
+  afterElimination = (method: (count: number) => void) => {
+    this.afterEliminationFns.push(method);
+    return () => {
+      const index = this.afterEliminationFns.indexOf(method);
+      if (index > -1) {
+        this.afterEliminationFns.splice(index, 1);
+      }
+    };
+  };
+
+  afterStart = (method: () => void) => {
+    this.afterStartFns.push(method);
+    return () => {
+      const index = this.afterStartFns.indexOf(method);
+      if (index > -1) {
+        this.afterStartFns.splice(index, 1);
+      }
+    };
+  };
+
+  afterPause = (method: () => void) => {
+    this.afterPauseFns.push(method);
+    return () => {
+      const index = this.afterPauseFns.indexOf(method);
+      if (index > -1) {
+        this.afterPauseFns.splice(index, 1);
+      }
+    };
+  };
 
   run = () => {
-    if (this.isOver() || this.status !== 'running') return;
+    if (this.isOver() || this.status !== "running") return;
     this.timer = window.setTimeout(() => {
       const newMap = this.move("down");
       this.tetrisMap?.updateMap(newMap);
@@ -123,7 +179,7 @@ export default class Game {
     if (!tetromino) return;
     const newTetromino = rotateArray(tetromino);
     console.log(this.canRotate(newTetromino));
-    if(!this.canRotate(newTetromino)) return;
+    if (!this.canRotate(newTetromino)) return;
     this.tetromino = newTetromino;
   };
 
@@ -162,7 +218,7 @@ export default class Game {
     if (isLastCell) return true;
     return this.tetromino.some((item, i) => {
       const nextCell = this.map[y + i + 1];
-      return item.some((el, ii) => el && nextCell[x + ii])
+      return item.some((el, ii) => el && nextCell[x + ii]);
     });
   };
 
@@ -176,7 +232,7 @@ export default class Game {
     return this.tetromino.some((item, i) => {
       const lastIndex = item.lastIndexOf(1);
       const cell = this.map[y + i];
-      return !!cell[x + lastIndex + 1]
+      return !!cell[x + lastIndex + 1];
     });
   };
 
@@ -189,16 +245,16 @@ export default class Game {
     return this.tetromino.some((item, i) => {
       const index = item.indexOf(1);
       const cell = this.map[y + i];
-      return !!cell[x - index - 1]
+      return !!cell[x - index - 1];
     });
   };
 
   canRotate = (newTetromino: number[][]) => {
     const [x, y] = this.position;
     return !newTetromino.some((item, i) => {
-      const cell = this.map[y + i]
-      return item.some((el, ii) => el && cell[x + ii])
-    })
+      const cell = this.map[y + i];
+      return item.some((el, ii) => el && cell[x + ii]);
+    });
   };
 
   isOver = () => {
@@ -218,24 +274,29 @@ export default class Game {
     const newMap = deepClone(map);
     const [x, y] = this.position;
     let len = this.tetromino!.length;
-    let count = 0
-    for(let i = 0; i < len; i++) {
-      const index = y + i
-      const cell = newMap[index]
-      const hasEmptyBlock = cell.some((item: number) => !item)
-      if(!hasEmptyBlock) {
-        newMap.splice(index, 1)
-        newMap.unshift(Array(20).fill(0))
-        count++
+    let count = 0;
+    for (let i = 0; i < len; i++) {
+      const index = y + i;
+      const cell = newMap[index];
+      const hasEmptyBlock = cell.some((item: number) => !item);
+      if (!hasEmptyBlock) {
+        newMap.splice(index, 1);
+        newMap.unshift(Array(20).fill(0));
+        count++;
       }
     }
+    if (count) {
+      this.afterEliminationFns.forEach((fn) => {
+        fn?.(count);
+      });
+    }
     // TODO: 计算得分
-    console.log('count:::', count)
+    console.log("count:::", count);
     return newMap;
-  }
+  };
 
-  move = (type: "left" | "right" | "down") => {
-    if(this.status !== 'running') return
+  move = (type: "left" | "right" | "down" | "bottom") => {
+    if (this.status !== "running") return;
     const [x, y] = this.position;
     if (!this.tetromino) return;
     switch (type) {
@@ -251,14 +312,27 @@ export default class Game {
         let newMap = this.getCurrentMap();
         if (this.isBottom()) {
           // 检测是否需要消除
-          newMap = this.clearCell(newMap)
-          this.map = newMap
+          newMap = this.clearCell(newMap);
+          this.map = newMap;
           this.tetromino = this.getTetromino();
           this.position = [x, 0];
         } else {
           this.position = [x, y + 1];
         }
         return newMap;
+      case "bottom":
+        clearTimeout(this.timer);
+        while (!this.isBottom()) {
+          const [x, y] = this.position;
+          this.position = [x, y + 1];
+        }
+        newMap = this.getCurrentMap();
+        // 检测是否需要消除
+        newMap = this.clearCell(newMap);
+        this.map = newMap;
+        this.tetromino = this.getTetromino();
+        this.position = [x, 0];
+        this.run();
     }
   };
 
