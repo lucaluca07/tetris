@@ -28,8 +28,8 @@ export default class TetrisMap {
     const h = map.length;
     const w = map[0].length;
     ctx.clearRect(0, 0, this.size * w, this.size * h);
-    ctx.strokeStyle = "#eee";
-    ctx.fillStyle = "green";
+    ctx.strokeStyle = '#eee';
+    ctx.fillStyle = '#13c2c2';
     ctx.lineWidth = 1;
     console.log(map);
     map.forEach((row, rowIndex) => {

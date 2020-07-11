@@ -1,31 +1,50 @@
-import Game from "./core/game";
+import Game from './core/game';
+import './index.css';
 
-let status = "init";
+let status = 'init';
 function init() {
-  const root = document.querySelector("#root") || document.body;
-  const startButton = document.createElement("button");
-  startButton.innerHTML = "start";
-  root.appendChild(startButton);
+  let score = 0;
+  const root = document.querySelector('#root') || document.body;
+  const startButton = document.querySelector('.control');
+  const scoreBlock = document.querySelector('.score');
+  scoreBlock!.innerHTML = String(score);
 
   const game = new Game({
     rowLen: 30,
     colLen: 20,
-    container: root,
+    container: root
   });
 
-  startButton.addEventListener("click", () => {
-    let command: "start" | "pause" = "start";
-    if (status === "running") {
-      command = "pause";
-      status = "pause";
-    } else {
-      status = "running";
+  game.on('clear', (count: number) => {
+    switch (count) {
+      case 1:
+        score += 100;
+        break;
+      default:
+        score += count * 1.5 * 100;
+        break;
     }
-    startButton.innerHTML = status === "pause" ? "start" : "pause";
+    scoreBlock!.innerHTML = String(score);
+  });
+
+  game.on('over', () => {
+    alert('游戏结束');
+    game.command('reset');
+  });
+
+  startButton!.addEventListener('click', () => {
+    let command: 'start' | 'pause' = 'start';
+    if (status === 'running') {
+      command = 'pause';
+      status = 'pause';
+    } else {
+      status = 'running';
+    }
+    startButton!.innerHTML = status === 'pause' ? '开始' : '暂停';
     game.command(command);
   });
 
-  window.addEventListener("keydown", (event) => {
+  window.addEventListener('keydown', event => {
     console.log(event.keyCode);
     /**
      * W: 87
@@ -41,17 +60,17 @@ function init() {
     switch (event.keyCode) {
       case 65:
       case 37:
-        game.command("left");
+        game.command('left');
         break;
       case 68:
       case 38:
-        game.command("right");
+        game.command('right');
         break;
       case 87:
-        game.command("rotate");
+        game.command('rotate');
         break;
       case 83:
-        game.command("down");
+        game.command('down');
         break;
     }
   });

@@ -9,12 +9,18 @@
       name="description"
       content="Web site created using create-react-app"
     />
-    <!-- <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" /> -->
-    <!-- <link rel="manifest" href="%PUBLIC_URL%/manifest.json" /> -->
     <title>Tetris App</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <header class="header">
+      <div class="score-wrapper">
+        <span>得分：</span>
+        <span class="score"></span>
+      </div>
+      <div class="control">开始</div>
+    </header>
+    <div id="root">
+    </div>
   </body>
 </html>

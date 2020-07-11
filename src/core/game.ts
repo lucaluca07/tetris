@@ -32,22 +32,26 @@ export default class Game {
   tetrisMap?: TetrisMap;
   status: "init" | "running" | "pause";
   timer?: number;
-  afterEliminationFns: ((count: number) => void)[];
-  afterStartFns: (() => void)[];
-  afterPauseFns: (() => void)[];
+  defaultX: number;
+  clearListeners: ((count: number) => void)[];
+  startListeners: (() => void)[];
+  pauseListeners: (() => void)[];
+  overListeners: (() => void)[];
+
 
   constructor(config: Config) {
     const { rowLen = 20, colLen = 20, container } = config;
     this.rowLen = rowLen;
     this.colLen = colLen;
-    let start = Math.floor(map[0].length / 2);
-    this.position = [start, 0];
+    this.defaultX = Math.floor(colLen / 2);
+    this.position = [this.defaultX, 0];
     this.map = getMap(rowLen, colLen);
     this.init(container);
     this.status = "init";
-    this.afterEliminationFns = [];
-    this.afterStartFns = [];
-    this.afterPauseFns = [];
+    this.clearListeners = [];
+    this.startListeners = [];
+    this.pauseListeners = [];
+    this.overListeners = []
   }
 
   init = (dom: Element) => {
@@ -69,7 +73,7 @@ export default class Game {
       const map = this.getCurrentMap();
       this.tetrisMap?.updateMap(map);
     }
-    this.afterStartFns.forEach((fn) => fn?.());
+    this.startListeners.forEach((fn) => fn?.());
     this.status = "running";
     this.run();
   };
@@ -77,7 +81,7 @@ export default class Game {
   pause = () => {
     if (this.status === "pause") return;
     window.clearTimeout(this!.timer);
-    this.afterPauseFns.forEach((fn) => fn?.());
+    this.pauseListeners.forEach((fn) => fn?.());
     this.status = "pause";
   };
 
@@ -117,56 +121,72 @@ export default class Game {
 
   // 事件监听
   on = (
-    type: "afterPause" | "afterStart" | "afterElimination",
+    type: "start" | "pause" | "clear" | "over",
     method: Function
   ) => {
     switch (type) {
-      case "afterStart":
+      case "start":
         this.afterPause(method as () => void);
         break;
-      case "afterPause":
+      case "pause":
         this.afterStart(method as () => void);
         break;
-      case "afterElimination":
-        this.afterElimination(method as (count: number) => void);
+      case "clear":
+        this.afterClear(method as (count: number) => void);
         break;
+      case "over":
+        this.afterOver(method as () => void);
       default:
         break;
     }
   };
-
-  afterElimination = (method: (count: number) => void) => {
-    this.afterEliminationFns.push(method);
+  afterOver = (method: () => void) => {
+    this.overListeners.push(method);
     return () => {
-      const index = this.afterEliminationFns.indexOf(method);
+      const index = this.overListeners.indexOf(method);
       if (index > -1) {
-        this.afterEliminationFns.splice(index, 1);
+        this.overListeners.splice(index, 1);
+      }
+    };
+  };
+
+  afterClear = (method: (count: number) => void) => {
+    this.clearListeners.push(method);
+    return () => {
+      const index = this.clearListeners.indexOf(method);
+      if (index > -1) {
+        this.clearListeners.splice(index, 1);
       }
     };
   };
 
   afterStart = (method: () => void) => {
-    this.afterStartFns.push(method);
+    this.startListeners.push(method);
     return () => {
-      const index = this.afterStartFns.indexOf(method);
+      const index = this.startListeners.indexOf(method);
       if (index > -1) {
-        this.afterStartFns.splice(index, 1);
+        this.startListeners.splice(index, 1);
       }
     };
   };
 
   afterPause = (method: () => void) => {
-    this.afterPauseFns.push(method);
+    this.pauseListeners.push(method);
     return () => {
-      const index = this.afterPauseFns.indexOf(method);
+      const index = this.pauseListeners.indexOf(method);
       if (index > -1) {
-        this.afterPauseFns.splice(index, 1);
+        this.pauseListeners.splice(index, 1);
       }
     };
   };
 
   run = () => {
-    if (this.isOver() || this.status !== "running") return;
+    if(this.isOver()) {
+      console.log('over')
+      this.overListeners.forEach((fn) => fn?.());
+      return;
+    }
+    if (this.status !== "running") return;
     this.timer = window.setTimeout(() => {
       const newMap = this.move("down");
       this.tetrisMap?.updateMap(newMap);
@@ -253,7 +273,7 @@ export default class Game {
     const [x, y] = this.position;
     return !newTetromino.some((item, i) => {
       const cell = this.map[y + i];
-      return item.some((el, ii) => el && cell[x + ii]);
+      return item.some((el, ii) => (el && cell[x + ii] !== 0));
     });
   };
 
@@ -286,12 +306,10 @@ export default class Game {
       }
     }
     if (count) {
-      this.afterEliminationFns.forEach((fn) => {
+      this.clearListeners.forEach((fn) => {
         fn?.(count);
       });
     }
-    // TODO: 计算得分
-    console.log("count:::", count);
     return newMap;
   };
 
@@ -315,7 +333,7 @@ export default class Game {
           newMap = this.clearCell(newMap);
           this.map = newMap;
           this.tetromino = this.getTetromino();
-          this.position = [x, 0];
+          this.position = [this.defaultX, 0];
         } else {
           this.position = [x, y + 1];
         }
@@ -331,7 +349,7 @@ export default class Game {
         newMap = this.clearCell(newMap);
         this.map = newMap;
         this.tetromino = this.getTetromino();
-        this.position = [x, 0];
+        this.position = [this.defaultX, 0];
         this.run();
     }
   };

@@ -5,4 +5,4 @@ export function randomNum(start: number, end?: number) {
     return parseInt(String(Math.random() * (end - start + 1) + start), 10);
   }
   return parseInt(String(Math.random() * (start + 1)), 10);
-};
+}
