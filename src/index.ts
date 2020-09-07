@@ -47,10 +47,6 @@ function init() {
   window.addEventListener('keydown', event => {
     console.log(event.keyCode);
     /**
-     * W: 87
-     * S: 83
-     * A: 65
-     * D: 68
      * up: 38
      * down: 40
      * left: 37
@@ -58,18 +54,16 @@ function init() {
      * space: 32
      */
     switch (event.keyCode) {
-      case 65:
       case 37:
         game.command('left');
         break;
-      case 68:
-      case 38:
+      case 39:
         game.command('right');
         break;
-      case 87:
+      case 38:
         game.command('rotate');
         break;
-      case 83:
+      case 40:
         game.command('down');
         break;
     }

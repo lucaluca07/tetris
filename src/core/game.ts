@@ -40,7 +40,7 @@ export default class Game {
 
 
   constructor(config: Config) {
-    const { rowLen = 20, colLen = 20, container } = config;
+    const { rowLen = 20, colLen = 10, container } = config;
     this.rowLen = rowLen;
     this.colLen = colLen;
     this.defaultX = Math.floor(colLen / 2);
